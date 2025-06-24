@@ -1,4 +1,5 @@
 # Discord Bot
+A simple discord bot to stream mp3 in vocal channel.
 
 ## Usage
 Currently configure to diffuse RMC radio, but can be easily configure ( constant STREAM_URL at the top of index.ts )
