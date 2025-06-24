@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import {
     ChatInputCommandInteraction,
-    Client, GatewayIntentBits,
+    Client,
+    GatewayIntentBits,
     GuildMember,
     SlashCommandBuilder,
     VoiceChannel,
@@ -9,7 +10,12 @@ import {
 import {
     joinVoiceChannel,
     VoiceConnectionStatus,
+    createAudioPlayer,
+    createAudioResource,
+    AudioPlayerStatus,
 } from '@discordjs/voice';
+import {createReadStream} from "fs";
+import path from "path";
 
 class Mp3 {
     private client: Client;
@@ -110,6 +116,23 @@ class Mp3 {
                 this.voiceConnection.on(VoiceConnectionStatus.Ready, async () => {
                     console.log(`Join voice channel: ${voiceChannel.name}`);
                     await interaction.reply(`Join voice channel: ${voiceChannel.name}`);
+
+                    const player = createAudioPlayer();
+
+                    const filePath = path.join(__dirname, 'sound.mp3');
+                    const resource = createAudioResource(createReadStream(filePath));
+
+                    player.play(resource);
+
+                    this.voiceConnection.subscribe(player);
+
+                    player.on(AudioPlayerStatus.Idle, () => {
+                        console.log('No resource left');
+                    });
+
+                    player.on('error', error => {
+                        console.error('Player error:', error);
+                    });
                 });
 
                 this.voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
