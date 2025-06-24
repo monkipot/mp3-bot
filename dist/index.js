@@ -52,6 +52,9 @@ class Mp3 {
                 case 'join':
                     yield this.join(interaction);
                     break;
+                case 'leave':
+                    yield this.leave(interaction);
+                    break;
             }
         }));
     }
@@ -64,6 +67,9 @@ class Mp3 {
                 new discord_js_1.SlashCommandBuilder()
                     .setName('join')
                     .setDescription('Join vocal channel'),
+                new discord_js_1.SlashCommandBuilder()
+                    .setName('leave')
+                    .setDescription('Leave vocal channel'),
             ];
             this.client.on('ready', () => __awaiter(this, void 0, void 0, function* () {
                 if (!this.client.application)
@@ -145,6 +151,29 @@ class Mp3 {
             catch (error) {
                 console.error('Cannot join vocal channel:', error);
                 yield interaction.reply('Cannot join vocal channel');
+            }
+        });
+    }
+    leave(interaction) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!this.voiceConnection || this.voiceConnection.state.status === voice_1.VoiceConnectionStatus.Destroyed) {
+                    yield interaction.reply("Bot isn't connected to any voice channel");
+                    return;
+                }
+                try {
+                    this.voiceConnection.destroy();
+                    this.voiceConnection = null;
+                    console.log('Disconnect from voice channel');
+                    yield interaction.reply('Disconnect from voice channel');
+                }
+                catch (disconnectError) {
+                    console.error('Error during disconnect:', disconnectError);
+                    yield interaction.reply('Error during disconnect');
+                }
+            }
+            catch (error) {
+                console.error('Cannot leave voice channel:', error);
             }
         });
     }

@@ -62,6 +62,9 @@ class Mp3 {
                 case 'join':
                     await this.join(interaction);
                     break;
+                case 'leave':
+                    await this.leave(interaction);
+                    break;
             }
         });
     }
@@ -74,6 +77,9 @@ class Mp3 {
             new SlashCommandBuilder()
                 .setName('join')
                 .setDescription('Join vocal channel'),
+            new SlashCommandBuilder()
+                .setName('leave')
+                .setDescription('Leave vocal channel'),
         ];
 
         this.client.on('ready', async () => {
@@ -132,7 +138,6 @@ class Mp3 {
 
                         player.play(resource);
                         this.voiceConnection.subscribe(player);
-
                     } catch (streamError) {
                         console.error('Error creating audio resource:', streamError);
                         return;
@@ -162,6 +167,28 @@ class Mp3 {
         } catch (error) {
             console.error('Cannot join vocal channel:', error);
             await interaction.reply('Cannot join vocal channel');
+        }
+    }
+
+    private async leave(interaction: ChatInputCommandInteraction): Promise<void> {
+        try {
+            if (!this.voiceConnection || this.voiceConnection.state.status === VoiceConnectionStatus.Destroyed) {
+                await interaction.reply("Bot isn't connected to any voice channel");
+                return;
+            }
+
+            try {
+                this.voiceConnection.destroy();
+                this.voiceConnection = null;
+
+                console.log('Disconnect from voice channel');
+                await interaction.reply('Disconnect from voice channel');
+            } catch (disconnectError) {
+                console.error('Error during disconnect:', disconnectError);
+                await interaction.reply('Error during disconnect');
+            }
+        } catch (error) {
+            console.error('Cannot leave voice channel:', error);
         }
     }
 }
