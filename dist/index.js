@@ -8,15 +8,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const discord_js_1 = require("discord.js");
 const voice_1 = require("@discordjs/voice");
-const fs_1 = require("fs");
-const path_1 = __importDefault(require("path"));
+const STREAM_URL = 'https://audio.bfmtv.com/rmcradio_128.mp3';
 class Mp3 {
     constructor() {
         this.voiceConnection = null;
@@ -89,7 +85,6 @@ class Mp3 {
             }
             catch (error) {
                 console.error('Cannot say hello:', error);
-                yield interaction.reply('sfdzersqdzer zqsdfv qazefr zedsfAGB ZD Fsd');
             }
         });
     }
@@ -109,20 +104,29 @@ class Mp3 {
                         selfDeaf: false,
                         selfMute: false
                     });
-                    this.voiceConnection.on(voice_1.VoiceConnectionStatus.Disconnected, () => __awaiter(this, void 0, void 0, function* () {
-                        console.log('Disconnect from voice channel');
-                    }));
-                    this.voiceConnection.on('error', (error) => {
-                        console.error('Error in voice channel:', error);
-                    });
                     this.voiceConnection.on(voice_1.VoiceConnectionStatus.Ready, () => __awaiter(this, void 0, void 0, function* () {
                         console.log(`Join voice channel: ${voiceChannel.name}`);
                         yield interaction.reply(`Join voice channel: ${voiceChannel.name}`);
-                        const player = (0, voice_1.createAudioPlayer)();
-                        const filePath = path_1.default.join(__dirname, 'sound.mp3');
-                        const resource = (0, voice_1.createAudioResource)((0, fs_1.createReadStream)(filePath));
-                        player.play(resource);
-                        this.voiceConnection.subscribe(player);
+                        const player = (0, voice_1.createAudioPlayer)({
+                            behaviors: {
+                                noSubscriber: voice_1.NoSubscriberBehavior.Pause,
+                            },
+                        });
+                        try {
+                            const resource = (0, voice_1.createAudioResource)(STREAM_URL, {
+                                inputType: voice_1.StreamType.Arbitrary,
+                                inlineVolume: true,
+                            });
+                            player.play(resource);
+                            this.voiceConnection.subscribe(player);
+                        }
+                        catch (streamError) {
+                            console.error('Error creating audio resource:', streamError);
+                            return;
+                        }
+                        player.on(voice_1.AudioPlayerStatus.Playing, () => {
+                            console.log('mp3 is now playing');
+                        });
                         player.on(voice_1.AudioPlayerStatus.Idle, () => {
                             console.log('No resource left');
                         });
@@ -130,10 +134,17 @@ class Mp3 {
                             console.error('Player error:', error);
                         });
                     }));
+                    this.voiceConnection.on(voice_1.VoiceConnectionStatus.Disconnected, () => __awaiter(this, void 0, void 0, function* () {
+                        console.log('Disconnect from voice channel');
+                    }));
+                    this.voiceConnection.on('error', (error) => {
+                        console.error('Error in voice channel:', error);
+                    });
                 }
             }
             catch (error) {
                 console.error('Cannot join vocal channel:', error);
+                yield interaction.reply('Cannot join vocal channel');
             }
         });
     }

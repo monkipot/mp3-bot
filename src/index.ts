@@ -13,13 +13,15 @@ import {
     createAudioPlayer,
     createAudioResource,
     AudioPlayerStatus,
+    StreamType,
+    NoSubscriberBehavior, VoiceConnection,
 } from '@discordjs/voice';
-import {createReadStream} from "fs";
-import path from "path";
+
+const STREAM_URL = 'https://audio.bfmtv.com/rmcradio_128.mp3';
 
 class Mp3 {
     private client: Client;
-    private voiceConnection: any = null;
+    private voiceConnection: VoiceConnection | any = null;
 
     constructor() {
         this.client = new Client({
@@ -90,7 +92,6 @@ class Mp3 {
             await interaction.reply('Hello dumb people');
         } catch (error) {
             console.error('Cannot say hello:', error);
-            await interaction.reply('sfdzersqdzer zqsdfv qazefr zedsfAGB ZD Fsd');
         }
     }
 
@@ -117,14 +118,29 @@ class Mp3 {
                     console.log(`Join voice channel: ${voiceChannel.name}`);
                     await interaction.reply(`Join voice channel: ${voiceChannel.name}`);
 
-                    const player = createAudioPlayer();
+                    const player = createAudioPlayer({
+                        behaviors: {
+                            noSubscriber: NoSubscriberBehavior.Pause,
+                        },
+                    });
 
-                    const filePath = path.join(__dirname, 'sound.mp3');
-                    const resource = createAudioResource(createReadStream(filePath));
+                    try {
+                        const resource = createAudioResource(STREAM_URL, {
+                            inputType: StreamType.Arbitrary,
+                            inlineVolume: true,
+                        });
 
-                    player.play(resource);
+                        player.play(resource);
+                        this.voiceConnection.subscribe(player);
 
-                    this.voiceConnection.subscribe(player);
+                    } catch (streamError) {
+                        console.error('Error creating audio resource:', streamError);
+                        return;
+                    }
+
+                    player.on(AudioPlayerStatus.Playing, () => {
+                        console.log('mp3 is now playing');
+                    });
 
                     player.on(AudioPlayerStatus.Idle, () => {
                         console.log('No resource left');
@@ -145,6 +161,7 @@ class Mp3 {
             }
         } catch (error) {
             console.error('Cannot join vocal channel:', error);
+            await interaction.reply('Cannot join vocal channel');
         }
     }
 }
