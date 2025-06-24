@@ -1,20 +1,40 @@
 import 'dotenv/config';
 import {
     ChatInputCommandInteraction,
-    Client,
+    Client, GatewayIntentBits,
+    GuildMember,
     SlashCommandBuilder,
+    VoiceChannel,
 } from 'discord.js';
+import {
+    joinVoiceChannel,
+    VoiceConnectionStatus,
+} from '@discordjs/voice';
 
 class Mp3 {
     private client: Client;
+    private voiceConnection: any = null;
 
     constructor() {
         this.client = new Client({
-            intents: []
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildVoiceStates,
+                GatewayIntentBits.GuildMessages
+            ]
         });
 
         this.events();
         this.cmd();
+    }
+
+    public async start(token: string): Promise<void> {
+        try {
+            console.log("Starting bot");
+            await this.client.login(token);
+        } catch (error) {
+            console.error('Login error:', error);
+        }
     }
 
     private events(): void {
@@ -31,6 +51,9 @@ class Mp3 {
                 case 'hello':
                     await this.hello(interaction);
                     break;
+                case 'join':
+                    await this.join(interaction);
+                    break;
             }
         });
     }
@@ -40,6 +63,9 @@ class Mp3 {
             new SlashCommandBuilder()
                 .setName('hello')
                 .setDescription('Seems pretty obvious'),
+            new SlashCommandBuilder()
+                .setName('join')
+                .setDescription('Join vocal channel'),
         ];
 
         this.client.on('ready', async () => {
@@ -62,12 +88,40 @@ class Mp3 {
         }
     }
 
-    public async start(token: string): Promise<void> {
+    private async join(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            console.log("Starting bot");
-            await this.client.login(token);
+            const member = interaction.member as GuildMember,
+                voiceChannel = member.voice.channel as VoiceChannel;
+
+            if (!voiceChannel) {
+                await interaction.reply("You must join a voice channel");
+                return;
+            }
+
+            if (!this.voiceConnection || this.voiceConnection.state.status === VoiceConnectionStatus.Disconnected) {
+                this.voiceConnection = joinVoiceChannel({
+                    channelId: voiceChannel.id,
+                    guildId: interaction.guildId!,
+                    adapterCreator: interaction.guild!.voiceAdapterCreator,
+                    selfDeaf: false,
+                    selfMute: false
+                });
+
+                this.voiceConnection.on(VoiceConnectionStatus.Ready, async () => {
+                    console.log(`Join voice channel: ${voiceChannel.name}`);
+                    await interaction.reply(`Join voice channel: ${voiceChannel.name}`);
+                });
+
+                this.voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
+                    console.log('Disconnect from voice channel');
+                });
+
+                this.voiceConnection.on('error', (error: Error) => {
+                    console.error('Error in voice channel:', error);
+                });
+            }
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('Cannot join vocal channel:', error);
         }
     }
 }

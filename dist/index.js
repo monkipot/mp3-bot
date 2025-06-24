@@ -11,13 +11,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const discord_js_1 = require("discord.js");
+const voice_1 = require("@discordjs/voice");
 class Mp3 {
     constructor() {
+        this.voiceConnection = null;
         this.client = new discord_js_1.Client({
-            intents: []
+            intents: [
+                discord_js_1.GatewayIntentBits.Guilds,
+                discord_js_1.GatewayIntentBits.GuildVoiceStates,
+                discord_js_1.GatewayIntentBits.GuildMessages
+            ]
         });
         this.events();
         this.cmd();
+    }
+    start(token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                console.log("Starting bot");
+                yield this.client.login(token);
+            }
+            catch (error) {
+                console.error('Login error:', error);
+            }
+        });
     }
     events() {
         this.client.once('ready', () => {
@@ -31,6 +48,9 @@ class Mp3 {
                 case 'hello':
                     yield this.hello(interaction);
                     break;
+                case 'join':
+                    yield this.join(interaction);
+                    break;
             }
         }));
     }
@@ -40,6 +60,9 @@ class Mp3 {
                 new discord_js_1.SlashCommandBuilder()
                     .setName('hello')
                     .setDescription('Seems pretty obvious'),
+                new discord_js_1.SlashCommandBuilder()
+                    .setName('join')
+                    .setDescription('Join vocal channel'),
             ];
             this.client.on('ready', () => __awaiter(this, void 0, void 0, function* () {
                 if (!this.client.application)
@@ -65,14 +88,36 @@ class Mp3 {
             }
         });
     }
-    start(token) {
+    join(interaction) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log("Starting bot");
-                yield this.client.login(token);
+                const member = interaction.member, voiceChannel = member.voice.channel;
+                if (!voiceChannel) {
+                    yield interaction.reply("You must join a voice channel");
+                    return;
+                }
+                if (!this.voiceConnection || this.voiceConnection.state.status === voice_1.VoiceConnectionStatus.Disconnected) {
+                    this.voiceConnection = (0, voice_1.joinVoiceChannel)({
+                        channelId: voiceChannel.id,
+                        guildId: interaction.guildId,
+                        adapterCreator: interaction.guild.voiceAdapterCreator,
+                        selfDeaf: false,
+                        selfMute: false
+                    });
+                    this.voiceConnection.on(voice_1.VoiceConnectionStatus.Ready, () => __awaiter(this, void 0, void 0, function* () {
+                        console.log(`Join voice channel: ${voiceChannel.name}`);
+                        yield interaction.reply(`Join voice channel: ${voiceChannel.name}`);
+                    }));
+                    this.voiceConnection.on(voice_1.VoiceConnectionStatus.Disconnected, () => __awaiter(this, void 0, void 0, function* () {
+                        console.log('Disconnect from voice channel');
+                    }));
+                    this.voiceConnection.on('error', (error) => {
+                        console.error('Error in voice channel:', error);
+                    });
+                }
             }
             catch (error) {
-                console.error('Login error:', error);
+                console.error('Cannot join vocal channel:', error);
             }
         });
     }
